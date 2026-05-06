@@ -1,0 +1,1 @@
+Questa cartella contiene il materiale che utilizzerò nella presentazione del mio lavoro ai ragazzi di seconda media.
