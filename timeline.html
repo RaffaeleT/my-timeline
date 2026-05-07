@@ -1,0 +1,451 @@
+﻿
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400&display=swap');
+
+  :root {
+    --color-border-secondary:  #d1d5db;
+    --color-border-tertiary:   #e5e7eb;
+    --color-text-primary:      #111827;
+    --color-text-secondary:    #6b7280;
+    --color-text-tertiary:     #9ca3af;
+    --color-background-primary: #fff9c3;
+    --border-radius-lg:        12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .tl-root {
+    font-family: 'DM Sans', sans-serif;
+    background: transparent;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .tl-scroll-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 1rem;
+  }
+  .tl-scroll-wrap::-webkit-scrollbar { display: none; }
+
+  .tl-canvas {
+    position: relative;
+    width: 1900px;
+    height: 490px;
+  }
+
+  .tl-axis {
+    position: absolute;
+    top: 160px;
+    left: 0; right: 0;
+    height: 1px;
+    background: var(--color-border-secondary);
+  }
+
+  .tl-era {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: 1px dashed var(--color-border-tertiary);
+  }
+  .tl-era-label {
+    position: absolute;
+    top: 12px;
+    left: 6px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--color-text-tertiary);
+    font-weight: 300;
+    text-transform: uppercase;
+  }
+
+  .tl-track {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  .tl-connector {
+    fill: none;
+    stroke: #7F77DD;
+    stroke-width: 1.5;
+    opacity: 0.55;
+    stroke-dasharray: none;
+  }
+  .tl-connector.dashed {
+    stroke-dasharray: 4 4;
+    opacity: 0.35;
+  }
+
+  .tl-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    gap: 6px;
+  }
+  .tl-node.above {
+    transform: translate(-50%, calc(-100% + 3px));
+  }
+  .tl-node.below {
+    transform: translate(-50%, -3px);
+  }
+
+  .tl-bubble {
+    background: #fff;
+    border: 1.5px solid #7F77DD;
+    border-radius: 24px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+    transform: scale(0);
+    opacity: 0;
+    will-change: transform, opacity;
+    line-height: 1.4;
+  }
+  .tl-bubble.root-bubble {
+    background: #7F77DD;
+    color: #fff;
+    font-family: 'Playfair Display', serif;
+    font-size: 12px;
+    border-color: #534AB7;
+    transform: scale(1);
+    opacity: 1;
+    cursor: pointer;
+  }
+  .tl-bubble.popped {
+    transform: scale(1);
+    opacity: 1;
+  }
+  .tl-bubble:not(.root-bubble):hover {
+    background: #EEEDFE;
+    border-color: #534AB7;
+    color: #3C3489;
+    transform: scale(1.06);
+  }
+
+  .tl-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #7F77DD;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .tl-dot.visible { opacity: 1; }
+
+  .tl-node.above .tl-dot { order: 2; }
+  .tl-node.above .tl-bubble { order: 1; }
+  .tl-node.below .tl-dot { order: 1; }
+  .tl-node.below .tl-bubble { order: 2; }
+
+  .tl-tooltip {
+    position: absolute;
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: var(--border-radius-lg);
+    padding: 6px 14px;
+    font-size: 16px;
+    color: var(--color-text-primary);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    width: max-content;
+    max-width: 260px;
+    text-align: center;
+    z-index: 10;
+    white-space: normal;
+    word-break: break-word;
+    transform: translateX(-50%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .tl-tooltip.show { opacity: 1; }
+
+  .tl-legend {
+    display: flex;
+    gap: 20px;
+    padding: 8px 20px;
+    flex-wrap: wrap;
+  }
+  .tl-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    font-weight: 300;
+  }
+  .tl-legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+</style>
+
+<div class="tl-root">
+  <div class="tl-legend">
+    <div class="tl-legend-item">
+      <div class="tl-legend-dot" style="background:#7F77DD"></div> Formazione
+    </div>
+    <div class="tl-legend-item">
+      <div class="tl-legend-dot" style="background:#1D9E75"></div> Data Science
+    </div>
+    <div class="tl-legend-item">
+      <div class="tl-legend-dot" style="background:#D85A30"></div> Audio&Media
+    </div>
+  </div>
+
+  <div class="tl-scroll-wrap" id="scrollWrap">
+    <div class="tl-canvas" id="canvas">
+      <div class="tl-era" style="left: 280px;">
+        <span class="tl-era-label">1992</span>
+      </div>
+      <div class="tl-era" style="left:380px">
+        <span class="tl-era-label">2000</span>
+      </div>
+      <div class="tl-era" style="left:740px">
+        <span class="tl-era-label">2010</span>
+      </div>
+      <div class="tl-era" style="left:1160px">
+        <span class="tl-era-label">2020</span>
+      </div>
+      <div class="tl-era" style="left:1580px">
+        <span class="tl-era-label">Futuro</span>
+      </div>
+
+      <svg class="tl-track" id="svgTrack" xmlns="http://www.w3.org/2000/svg"></svg>
+
+      <div class="tl-tooltip" id="tooltip"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const FORM_Y  = 100;
+const INFO_Y  = 230;
+const MUSIC_Y = 350;
+
+const CAT_COLORS = { f: '#7F77DD', i: '#1D9E75', m: '#D85A30' };
+
+const nodes = [
+  { id:'f0', cat:'f', x:140, y:FORM_Y,  label:'Formazione Continua',    root:true, desc:'Non smettere mai di essere curiosi' },
+  { id:'i0', cat:'i', x:140, y:INFO_Y,  label:'Trasformazione Digitale',   root:true, desc:'Le tecnologie digitali ci aiutano nella ricerca di significato' },
+  { id:'m0', cat:'m', x:140, y:MUSIC_Y, label:'Creatività', root:true, desc:'Raccontare emozioni' },
+
+  { id:'f1a', cat:'f', x:280, y:FORM_Y, label:'Maturità scientifica',                   above:true, desc:'Diploma di maturità scientifica' },
+  { id:'f1',  cat:'f', x:400,  y:FORM_Y, label:'Laurea in Scienze Forestali e Ambientali',          above:true, desc:'Formazione universitaria magistrale' },
+  { id:'f2',  cat:'f', x:530,  y:FORM_Y, label:'Database e Cartografia Digitale',      above:true, desc:'Specializzazione di Laurea in Sistemi Informativi Territoriali' },
+  { id:'f2a', cat:'f', x:690,  y:FORM_Y, label:'Certificazione Microsoft',             above:true, desc:'Certificazione Microsoft SQL Server' },
+  { id:'f3',  cat:'f', x:850,  y:FORM_Y, label:'Master in Business Intelligence',       above:true, desc:'Data science, data warehouse e analisi dei dati' },
+  { id:'f4',  cat:'f', x:1040,  y:FORM_Y, label:'Corso in AI',                          above:true, desc:"Primo approfondimento strutturato sull'intelligenza artificiale" },
+  { id:'f5',  cat:'f', x:1190, y:FORM_Y, label:'Master in Innovation Management',      above:true, desc:'Focus su innovazione e strategia' },
+  { id:'f6',  cat:'f', x:1420, y:FORM_Y, label:'Master in Business Administration',    above:true, desc:'EMBA - POLIMI Graduate School of Management' },
+  { id:'f7',  cat:'f', x:1630, y:FORM_Y, label:'Master in Quantum Computing',          above:true, dashed:true, desc:'Prospettiva futura: quantum computing' },
+
+  { id:'i1',  cat:'i', x:560,  y:INFO_Y+40, label:'Web Agency',                        below:true, desc:'Esperienza imprenditoriale, produzione di applicazioni sul web' },
+  { id:'i2',  cat:'i', x:560,  y:INFO_Y,    label:'Project Manager',                   above:true, desc:'Gestione progetti digitali in Sanità' },
+  { id:'i3',  cat:'i', x:630,  y:INFO_Y,    label:'IT Manager',                        below:true, desc:'Responsabile per lo sviluppo informatico nella Sanità' },
+  { id:'i4a', cat:'i', x:860,  y:INFO_Y,    label:'Data Analyst',                     below:true, desc:'Data Storytelling: Analisi Dati, Data Visualization' },
+  { id:'i4',  cat:'i', x:900,  y:INFO_Y-40, label:'Startup',                           above:true, dashed:true, desc:'Esperienza imprenditoriale' },
+  { id:'i4b', cat:'i', x:1000,  y:INFO_Y-40, label:'Amministratore Delegato',           above:true, desc:'Leadership Strategica' },
+  { id:'i5',  cat:'i', x:1090,  y:INFO_Y,    label:'Data Engineer',                    below:true, desc:'Specializzazione in data engineering e architetture dati' },
+  { id:'i6',  cat:'i', x:1220, y:INFO_Y,    label:'Team Leader Data Engineering',      below:true, desc:'Leadership tecnica del team dati' },
+  { id:'i7',  cat:'i', x:1460, y:INFO_Y,    label:'Team Leader AI',                    below:true, desc:'Leadership su progetti AI' },
+  { id:'i8',  cat:'i', x:1510, y:INFO_Y-40, label:'Startup',                           above:true, dashed:true, desc:'Startup nelle Energie Rinnovabili' },
+  { id:'i8b', cat:'i', x:1610, y:INFO_Y-40, label:'Chief Technology Officer',          above:true, desc:'Leadership tecnologica' },
+
+  { id:'m1', cat:'m', x:350,  y:MUSIC_Y, label:'Redattore',                              below:true, desc:'Esperienza editoriale in riviste di informatica musicale' },
+  { id:'m2', cat:'m', x:480,  y:MUSIC_Y, label:'Studio di produzione',                   below:true, desc:'Fondazione di uno studio di produzione audio per il cinema' },
+  { id:'m3', cat:'m', x:730,  y:MUSIC_Y, label:'Product Manager USA/GER',                below:true, desc:'Innovazione di prodotto per multinazionali strumenti audio professionali' },
+  { id:'m4', cat:'m', x:1320, y:MUSIC_Y, label:'Docente di Intelligenza Artificiale',    below:true, dashed:true, desc:'Attivita didattica su AI' },
+];
+
+const connectors = [
+  { from:'f0', to:'f1a' },
+  { from:'f1a', to:'f1' },
+  { from:'f1', to:'f2' },
+  { from:'f2', to:'f2a' },
+  { from:'f2a', to:'f3' },
+  { from:'f3', to:'f4' },
+  { from:'f4', to:'f5' },
+  { from:'f5', to:'f6' },
+  { from:'f6', to:'f7', dashed:true },
+  
+  { from:'i0', to:'i1' },
+  { from:'i0', to:'i2' },
+  { from:'f2', to:'i1', dashed:true },
+  { from:'f2', to:'i2', dashed:true },
+  { from:'i2', to:'i3' },
+  { from:'i3', to:'i4',  dashed:true },
+  { from:'i4', to:'i4b', dashed:true },
+  { from:'f2a', to:'i4a', dashed:true },
+  { from:'i3', to:'i4a' },
+  { from:'i4a', to:'i5' },
+  { from:'f3', to:'i4a', dashed:true },
+  { from:'i5', to:'i6' },
+  { from:'i6', to:'i7' },
+  { from:'f6',  to:'i8',  dashed:true },
+  { from:'i8',  to:'i8b', dashed:true },
+
+  { from:'f4', to:'m4', dashed:true },
+  { from:'f5', to:'i6', dashed:true },
+  { from:'f6', to:'i7', dashed:true },
+
+  { from:'m0', to:'m1' },
+  { from:'m1', to:'m2' },
+  { from:'m2', to:'m3' },
+  { from:'m3', to:'m4', dashed:true },
+];
+
+const INITIAL_NODES = ['f0','i0','m0','f1a'];
+
+const REVEAL_STEPS = [
+  { triggers: ['f1a'],               reveals: ['f1','m1'] },
+  { triggers: ['f1','m1'],           reveals: ['f2','i1','i2','m2'] },
+  { triggers: ['f2','i1','i2','m2'],    reveals: ['i3','f2a'] },
+  { triggers: ['i3','f2a'],             reveals: ['f3','m3'] },
+  { triggers: ['f3','m3'],              reveals: ['i4','i4a','i4b'] },
+  { triggers: ['i4','i4a','i4b'],       reveals: ['f4','i5'] },
+  { triggers: ['f4','i5'],           reveals: ['f5'] },
+  { triggers: ['f5'],               reveals: ['i6'] },
+  { triggers: ['i6'],               reveals: ['f6','m4'] },
+  { triggers: ['f6','m4'],           reveals: ['i7','i8','i8b','f7'] },
+];
+
+const triggerMap = {};
+REVEAL_STEPS.forEach(step => {
+  step.triggers.forEach(tid => { triggerMap[tid] = step.reveals; });
+});
+
+const canvas   = document.getElementById('canvas');
+const svgTrack = document.getElementById('svgTrack');
+const scrollWrap = document.getElementById('scrollWrap');
+const tooltip  = document.getElementById('tooltip');
+
+const nodeMap = {};
+nodes.forEach(n => nodeMap[n.id] = n);
+
+function makePath(x1, y1, x2, y2) {
+  if (y1 === y2) return `M${x1},${y1} L${x2},${y2}`;
+  const mx = (x1 + x2) / 2;
+  return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+}
+
+connectors.forEach(c => {
+  const a = nodeMap[c.from], b = nodeMap[c.to];
+  if (!a || !b) return;
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d', makePath(a.x, a.y, b.x, b.y));
+  path.setAttribute('fill','none');
+  path.setAttribute('stroke', CAT_COLORS[a.cat] || '#7F77DD');
+  path.setAttribute('stroke-width','1.5');
+  path.setAttribute('opacity', c.dashed ? '0.3' : '0.5');
+  if (c.dashed) path.setAttribute('stroke-dasharray','4 4');
+  svgTrack.appendChild(path);
+});
+
+let tooltipTimer;
+function showTip(text, bubbleEl, nodeData) {
+  tooltip.textContent = text;
+
+  const canvasRect = canvas.getBoundingClientRect();
+  const bubbleRect = bubbleEl.getBoundingClientRect();
+
+  const bubbleCenterX = bubbleRect.left - canvasRect.left + canvas.scrollLeft + bubbleRect.width / 2;
+  const GAP = 8;
+
+  if (nodeData.above) {
+    tooltip.style.top  = (bubbleRect.top - canvasRect.top - tooltip.offsetHeight - GAP) + 'px';
+  } else {
+    tooltip.style.top  = (bubbleRect.bottom - canvasRect.top + GAP) + 'px';
+  }
+  tooltip.style.left = bubbleCenterX + 'px';
+
+  tooltip.classList.add('show');
+
+  // reposition vertically after paint (offsetHeight may be 0 on first call)
+  requestAnimationFrame(() => {
+    if (nodeData.above) {
+      tooltip.style.top = (bubbleRect.top - canvasRect.top - tooltip.offsetHeight - GAP) + 'px';
+    }
+  });
+}
+
+const popped  = new Set();
+const nodeEls = {};
+
+function popIn(id, delay) {
+  const el = nodeEls[id];
+  if (!el) return;
+  setTimeout(() => {
+    el.bubble.classList.add('popped');
+    el.dot.classList.add('visible');
+  }, delay);
+}
+
+nodes.forEach(n => {
+  const div = document.createElement('div');
+  div.className = 'tl-node ' + (n.above ? 'above' : n.below ? 'below' : '');
+  div.style.left = n.x + 'px';
+  div.style.top  = n.y + 'px';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'tl-bubble' + (n.root ? ' root-bubble' : '');
+  bubble.style.borderColor = n.root ? '' : CAT_COLORS[n.cat];
+  bubble.textContent = n.label;
+
+  const dot = document.createElement('div');
+  dot.className = 'tl-dot';
+  dot.style.background = CAT_COLORS[n.cat];
+
+  div.appendChild(bubble);
+  div.appendChild(dot);
+  canvas.appendChild(div);
+  nodeEls[n.id] = { el: div, bubble, dot, n };
+
+  bubble.addEventListener('mouseenter', () => {
+    if (n.root || popped.has(n.id)) showTip(n.desc || n.label, bubble, n);
+  });
+  bubble.addEventListener('mouseleave', () => {
+    clearTimeout(tooltipTimer);
+    tooltip.classList.remove('show');
+  });
+
+  div.addEventListener('click', () => {
+    if (n.root) return;
+    if (!popped.has(n.id)) return;
+    scrollWrap.scrollTo({ left: n.x - 300, behavior: 'smooth' });
+    const toReveal = triggerMap[n.id];
+    if (toReveal) {
+      toReveal.forEach((id, i) => {
+        if (!popped.has(id)) {
+          popped.add(id);
+          popIn(id, i * 150);
+        }
+      });
+    }
+  });
+});
+
+setTimeout(() => {
+  INITIAL_NODES.forEach((id, i) => {
+    popped.add(id);
+    const el = nodeEls[id];
+    if (!el) return;
+    if (nodeMap[id].root) {
+      el.dot.classList.add('visible');
+    } else {
+      popIn(id, i * 80);
+    }
+  });
+}, 200);
+</script>
